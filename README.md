@@ -1,13 +1,14 @@
 # Sailing offshore Optimizer
 Optimizer VG 2020/2021
 
-This is a genetic algorithm optimizer that allows the user to plan a path to follow during a Sailing Offshore race. This optimizer allowed me to overtake just over 200 000 players in the 2020 VG, though it can fail miserably at times.
+This is an optimizer that allows the user to plan a path to follow during a Sailing Offshore race. This optimizer allowed me to overtake just over 200 000 players in the 2020 VG, though it can fail miserably at times.
 
-This was developed in order to learn more about machine learning, applying different techniques to try and improve upon the solutions given by the http://zezo.org/ simulator. The zeo simulator seems to be based upon a calculated solution, whereas this optimizer is akin to a steepest descent optimizer, which includes randomness via the genetic optimizer algorithm from the rgenoud package.
+This was developed in order to learn more about machine learning, applying different techniques to try and improve upon the solutions given by the http://zezo.org/ simulator. The zezo simulator seems to be based upon an exact solution, whereas this optimizer is akin to a steepest descent optimizer, which includes randomness via the genetic optimizer algorithm from the rgenoud package.
 
 __The problem__
 
-The boat is in point A in the ocean, and I want it to get to point B as quickly as possible.
+The boat is in point A in the ocean, and I want it to get to point B as quickly as possible. Should I go on a straigth line or tack all the way from A to B?
+![Position](https://github.com/fernandoeblagon/Vendee-Globe/blob/main/Position.png)
 
 __The data__
 
