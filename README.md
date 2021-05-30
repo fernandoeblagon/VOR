@@ -6,9 +6,11 @@ This is a genetic algorithm optimizer that allows the user to plan a path to fol
 This was developed in order to learn more about machine learning, applying different techniques to try and improve upon the solutions given by the http://zezo.org/ simulator. The zeo simulator seems to be based upon a calculated solution, whereas this optimizer is akin to a steepest descent optimizer, which includes randomness via the genetic optimizer algorithm from the rgenoud package.
 
 _The problem_
+
 The boat is in point A in the ocean, and I want it to get to point B as quickly as possible.
 
 _The data_
+
 To solve the problem some information is needed:
    1. The starting Lat_0/Lon_0
    2. The goal Lat_1/Lon_1
@@ -26,21 +28,25 @@ Since the speed of the vessel varies with the wind intensity, angle of incidence
 ![NN](https://github.com/fernandoeblagon/VOR/blob/main/nnVorJib.png)
 
 _Steps_
+
 In order to go from A to B, we need to take 3-hour steps. On each step we calculate the new position of the vessel after a 3-hour interval. The new position is taken as a starting point for the next step.
 
 Typically 12-18 steps are taken per simulation, covering 36 to 54 hours. A single step is described below.
 ![Step](https://github.com/fernandoeblagon/VOR/blob/main/Step.png)
 
 _The full journey_
+
 By calculating all of the steps, using the end point of the previous step as the starting point of the next one, we can calculate the distance covered by the boat sailing on a straight line from A to B.
 ![FullJourney](https://github.com/fernandoeblagon/VOR/blob/main/FullJourney.png)
 
 _The easiest solution_
+
 Going from A to B in a straight line is a straightforward thing. The angle is a constant defined by the starting and end points. Nevertheless, since the speed of the boat changes witht the wind angle and wind intensity, but also with the direction of the boat against the wind, very seldom going from A to B on a straight line will give us the fastest time. 
 
 Hence, the optimization problem, what is the best angle for the vessel to travel at each 3-hour step in order to get as fast as possible from A to B?
 
 _Optimized solution_
+
 We start with the straight line solution and iterate through solutions whilst setting the optimizer with a goal to minimize the distance between the last step and point B, our goal. 
 
 From the rgenoud package:
@@ -50,4 +56,3 @@ optimization problems for which derivatives do not exist._
 
 Below is an animation of the optimizer converging after 1000 iterations. The red dots are the start and end points.
 ![Optimisation](https://github.com/fernandoeblagon/VOR/blob/main/5bfs1k.gif)
-
