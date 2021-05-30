@@ -67,3 +67,6 @@ The .csv files are the polars, downloaded from the http://toxcct.free.fr/polars/
 NN1 to NN6 are the scripts that calculate the neural network for each sail and store them as nn objects.
 
 OptimVor.R is the main script that downloads the wind data, iterates the steps, runs the optimizer and prints the table and plot with the optimized solution.
+
+__Usage instructions__
+The usage instructions can be found in https://github.com/fernandoeblagon/Vendee-Globe/blob/main/Instructions.md
