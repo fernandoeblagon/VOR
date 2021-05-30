@@ -20,12 +20,13 @@ To solve the problem some information is needed:
 
 Current and goal Lat/Lon are given.
 
-The available wind at the current position can be obtained from the rwind package, which allows downloading a data frame containing the wind predictions from the NOOA website for the area where the vessel is in, for a defined date/time. The wind predictions are available in 3-hour intervals.
+The available wind at the current position can be obtained from the rwind package, which allows downloading a data frame containing the wind predictions from the NOOA website for the area where the vessel is in, for a defined date/time. The wind predictions are obtained on this optimizer in 3-hour intervals. Each record is composed of the Lat/Lon+Time, speed vectors and wind speed and angle as follows:
+![Wind](https://github.com/fernandoeblagon/Vendee-Globe/blob/main/Wind.png)
 
 The speed of the vessel can be calculated from the polars of the vessel. These can be found at http://toxcct.free.fr/polars/. An example can be found below.
 ![Polar](https://github.com/fernandoeblagon/VOR/blob/main/Polar.png)
 
-Since the speed of the vessel varies with the wind intensity, angle of incidence and sail configuration, calculating the velocity of the boat is not trivial. In order to simplify this, a neural network was trained with the true wind speed, true wind angle and speed for each sail and used to calculate the velocity of the boat. An example neural network for the IMOCA60 jib is shown below.
+Since the speed of the vessel varies with the wind intensity, angle of incidence and chosen sail, calculating the velocity of the boat is not trivial. In order to solve this problem, a neural network was trained with the date from the polars using true wind speed and true wind angle as inputs and speed as ouput for each sail. The NN can be used to calculate the velocity of the boat. An example neural network for the IMOCA60 jib is shown below.
 ![NN](https://github.com/fernandoeblagon/VOR/blob/main/nnVorJib.png)
 
 __Steps__
