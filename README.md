@@ -71,4 +71,5 @@ NN1 to NN6 are the scripts that calculate the neural network for each sail and s
 OptimVor.R is the main script that downloads the wind data, iterates the steps, runs the optimizer and prints the table and plot with the optimized solution.
 
 __Usage instructions__
+
 The usage instructions can be found in https://github.com/fernandoeblagon/Vendee-Globe/blob/main/Instructions.md
