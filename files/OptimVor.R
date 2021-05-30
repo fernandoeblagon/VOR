@@ -1,3 +1,4 @@
+# Library declaration
 library(neuralnet)
 library(rWind)
 library(geosphere)
@@ -13,18 +14,20 @@ library(mailR)
 library(readxl)
 library(rJava)
 
+# Import polars, only when needed
 VOR1_jib <- read_excel("C:/Personal/VOR/VOR1-jib.xlsx")
 VOR2_spi <- read_excel("C:/Personal/VOR/VOR2-spi.xlsx")
 VOR5_code_0 <- read_excel("C:/Personal/VOR/VOR5-code_0.xlsx")
 
-
+# Run neural network for polar fitting
 source("C:/Personal/VOR/NN_1.R")
 source("C:/Personal/VOR/NN_2.R")
 source("C:/Personal/VOR/NN_5.R")
 
+# Define the number of 3-hour steps to be calculated
 TL = 48
 
-
+# General matrix definition
 de = matrix(, nrow=TL, ncol=8)
 pred = matrix(, nrow=1, ncol=7)
 colnames(de) <- c("Lon", "Lat", "Angle", "TWA", "TWS", "Bearing", "Speed", "Sail")
@@ -33,20 +36,28 @@ colnames(pred) <- c("VORjib", "VORspi", "stay", "lightj", "VORcode0", "heavyg", 
 try2w = matrix(, nrow=TL, ncol=8)
 colnames(try2w) <- c("trial", "tack", "Lon", "Lat", "Bearing", "TWA", "Sail", "V")
 BeOp = c(rep.int(0, TL))
+
+# Distance in degrees of the size of area to be obtained for wind prediction. The reason for this is that if the starting and end point are in a similar 
+# latitude or longitude then the optimizer will sail outside the prediction area!
 leeway = 10
 
-
+# Define Present Latitude an Longitude as well as Destination Latitude and Longitude. Values must be expressed in degrees hence minutes must be divided by 
+# 60 and seconds by 3600
 PLa = 4+38/60+4/60/60
 PLo = 151+56/60+27/60/60
 DLo = 174+41.2/60
 DLa = -36-48.7/60
 
-
+# Define straight line bearing and fill the step array with the straitgh line bearing which will be used to Begin the Optimization.
 BeOp[] = as.integer(bearing(c(PLo,PLa),c(DLo,DLa)))
 if (BeOp[1]<0){
   BeOp = 360+BeOp
 }
+
+# Define the starting time
 TiSt <- c(2018, 2,15, 15)
+
+# Define the step size in hours. Numbers other than 3 hours are discouraged.
 Rate = 3
 
 OffLimits = c(-10, -8, 150, 162)
@@ -55,6 +66,9 @@ PLaR <- PLa
 PLoR <- PLo
 TiStR <- TiSt
 
+# Download wind data from NOOA using the rwind package.
+# The wind is downloaded in 3-hour intervals. If a number of steps lower than 48 is desired, then we can comment out the part of wind that will not be needed. This is 
+# a time-consuming step.
 WiSt <- TiSt
 u1 <- wind.dl(WiSt[1],WiSt[2],WiSt[3],WiSt[4],c(PLo, DLo)[which.min(c(PLo, DLo))]-leeway,c(PLo, DLo)[which.max(c(PLo, DLo))]+leeway,c(PLa, DLa)[which.min(c(PLa, DLa))]-leeway,c(PLa, DLa)[which.max(c(PLa, DLa))]+leeway)
 dsm <- strptime(paste(WiSt[3], WiSt[2], WiSt[1], WiSt[4],"00"), format = "%d %m %Y %H %M", tz = "GMT") + 3600*Rate
@@ -347,12 +361,13 @@ WiSt[4]<-hour(dsm)
 u48 <- wind.dl(WiSt[1],WiSt[2],WiSt[3],WiSt[4],c(PLo, DLo)[which.min(c(PLo, DLo))]-leeway,c(PLo, DLo)[which.max(c(PLo, DLo))]+leeway,c(PLa, DLa)[which.min(c(PLa, DLa))]-leeway,c(PLa, DLa)[which.max(c(PLa, DLa))]+leeway)
 
 
-
+# Definition of the target function to be optimized.
 target <- function(x) {
   
   
   for (i in 1:TL){
     
+    # Pick the right wind matrix    
     if (i==1){
       uuu = u1
     }
@@ -499,15 +514,20 @@ target <- function(x) {
       uuu = u48
     }
     
+    # Find the wind conditions for the current positino of the boat
     twind <- wind.fit(uuu[which((uuu$`latitude (degrees_north)` == round(PLa/0.5)*0.5) & (uuu$`longitude (degrees_east)` == round(PLo/0.5)*0.5)),])
-    twind[3]
-    twind[4]
+    # twind[3]
+    # twind[4]
+    
+    # Correct wind speed. In the Sailing Offshore game, if there's no wind, the minimum speed is adjusted to 4 kts. If over 4 km/h, tranform to kts.
     if (twind[4] < 4){
       twind[4] = 4
     } else
     {
       twind[4] = twind[4]*1.9438
     }
+    
+    # Correct angle to -180 to +180.
     if (twind[3] > 180){
       twind[3] = twind[3]-180
     } else
@@ -519,6 +539,7 @@ target <- function(x) {
       angle = 360 - angle
     }
     
+    # Scale wind speed and angle
     TWAvVORjib = scale(angle, center = minsVORjib[1], scale = maxsVORjib[1] - minsVORjib[1])
     TWSvVORjib = scale(twind[4], center = minsVORjib[2], scale = maxsVORjib[2] - minsVORjib[2])
     
@@ -528,6 +549,7 @@ target <- function(x) {
     TWAvVORcode0 = scale(angle, center = minsVORcode0[1], scale = maxsVORcode0[1] - minsVORcode0[1])
     TWSvVORcode0 = scale(twind[4], center = minsVORcode0[2], scale = maxsVORcode0[2] - minsVORcode0[2])
     
+    # Calculate speed/distance with each sail
     prediction.nnVORjib <- compute(nnVORjib,data.frame(TWA=TWAvVORjib,TWS=TWSvVORjib))
     prediction.nnVORjib_ <- prediction.nnVORjib$net.result*(max(dataVORjib$V)-min(dataVORjib$V))+min(dataVORjib$V)
     pred[1] <- prediction.nnVORjib_
@@ -542,9 +564,11 @@ target <- function(x) {
     pred[5] <- prediction.nnVORcode0_
     #pred[5] <- 0
     
+    # Calculate actual distance sailed with the best sail
     DistanceSailed=as.double(pred[which.max(pred)])*Rate*1852
-    DistanceSailed
+    # DistanceSailed
     
+    # Fill arrays to check for sailing off limits, for example when sailing near the ice exclusion zone.
     p <- cbind(PLo,PLa)
     d <- destPoint(p,as.double(x[i]),DistanceSailed)
     de[i,1] <- d[1]
@@ -556,13 +580,14 @@ target <- function(x) {
     de[i,7] <- as.double(pred[which.max(pred)])
     de[i,8] <- colnames(pred)[which.max(pred)]
     
-    
+    # If ouside limits, punish the target by going back to previous point.
     if ((d[2] > OffLimits[1]) & (d[2] < OffLimits[2]) & (d[1] > OffLimits[3]) & (d[1] < OffLimits[4] )){
     }    else    {
       PLa <- d[2]
       PLo <- d[1]
     }
     
+    # Calculate new time for next step
     dtm <- strptime(paste(TiSt[3], TiSt[2], TiSt[1], TiSt[4],"00"), format = "%d %m %Y %H %M", tz = "GMT") + 3600*Rate
     TiSt[2]<-month(dtm)
     TiSt[1]<-year(dtm)
@@ -584,6 +609,7 @@ target <- function(x) {
     flush.console()
   }
   
+  # Calculate target function which is the distance between the last point of the last step and the destination point.
   result <- distHaversine(c(PLo,PLa),c(DLo,DLa))/10000
   print(result)
   # update GUI console
@@ -592,31 +618,16 @@ target <- function(x) {
   return(result)
 }
 
-#a <- target(c(50,70,50,61,61,61,61,61,61,64,64,64,64,64,64, 132, 132, 132, 132, 132, 132, 132, 132, 132))
 a <- target(BeOp)
 
-#a <- target(c(70,70,45,100,100,100,100,113,113,113,113,113,113,113,113, 132, 132, 132, 132, 132, 132, 144, 144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,128,128,128,128,180, 195, 157 ))
-#a
-
-#optCou
-#a
-#difi <- opm(BeOp, target, method = "Nelder-Mead", control = list(maxit = 5, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-
-
-#didi <- opm(BeOp, target, lower = BeOp-90, upper = BeOp+90, method = "L-BFGS-B", control = list(maxit = 5, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-
-
-#difu <- nloptr(x0=BeOp, eval_f=target, lb = BeOp-90, ub = BeOp+90, opts = list("algorithm"="NLOPT_GN_ISRES", maxeval = 1000, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-
+# Define boundary conditions for optimization. boundy[1,] and [2,] define the maximum deviation from the straight line that the boat can tack. 
 boundy <- matrix(, nrow=2, ncol=TL)
 boundy[1,] <- BeOp-90
 boundy[2,] <- BeOp+90
 boundy <- t(boundy)
+
+# Run optimization
 fidu <-  genoud(target, max.generations = 100, print.level = 3, hard.generation.limit = TRUE, data.type.int=TRUE, pop.size = 100, Domains = boundy, boundary.enforcement=2, starting.values=BeOp, nvars=TL,max=FALSE)
-
-
-#d <- opm(BeOp, target, method = "Rvmmin", control = list(maxit = 5, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-#optCou2 <- difu[1,1:TL]
 
 optCou2 <- fidu$solution
 
@@ -624,7 +635,7 @@ PLa <- PLaR
 PLo <- PLoR
 TiSt <- TiStR
 
-
+# Define new function to calculate the distance travelled using the direct line for plotting.
 targetS <- function(x) {
   for (i in 1:TL) {
     if (i == 1) {
@@ -1069,7 +1080,7 @@ targetS <- function(x) {
   
 }
 
-#a <- target(c(50,70,50,61,61,61,61,61,61,64,64,64,64,64,64, 132, 132, 132, 132, 132, 132, 132, 132, 132))
+# calculate direct distance
 b <- targetS(BeOp)
 
 
@@ -1077,18 +1088,6 @@ for(uh in 1:24)
 {
   BeOp[uh] <- BeOp[uh]+uh
 }
-#a <- target(c(70,70,45,100,100,100,100,113,113,113,113,113,113,113,113, 132, 132, 132, 132, 132, 132, 144, 144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,128,128,128,128,180, 195, 157 ))
-#a
-
-#optCou
-#a
-#difi <- opm(BeOp, target, method = "Nelder-Mead", control = list(maxit = 5, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-
-
-#didi <- opm(BeOp, target, lower = BeOp-90, upper = BeOp+90, method = "L-BFGS-B", control = list(maxit = 5, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
-
-
-#difu <- nloptr(x0=BeOp, eval_f=target, lb = BeOp-90, ub = BeOp+90, opts = list("algorithm"="NLOPT_GN_ISRES", maxeval = 1000, trace = 6, REPORT = 1, fnscale = 100, parscale= c(2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3, 2e3, 2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3,2e3)))
 
 boundyS <- matrix(, nrow=2, ncol=TL)
 boundyS[1,] <- BeOp-90
@@ -1366,57 +1365,38 @@ lon <- c(DLo,PLo)
 lat <- c(PLa, DLa)
 df <- as.data.frame(cbind(lon,lat))
 
-# getting the map
+# Getting the map and drawing over it
 mapgilbert <- get_map(location = c(lon = mean(df$lon), lat = mean(df$lat)), zoom = 4,
                       maptype = "satellite", scale = 2)
 
 pointers <- as.data.frame(course(BeOp)[,c(3,4)])
 
-#course(optCou)
 
 pointers <- matrix(as.double(matrix(unlist(pointers), nrow = TL, ncol=2)), nrow = TL, ncol=2)
 colnames(pointers) <- c("Lon", "Lat")
-#pointers
+
 pointers <- as.data.frame(pointers)
-
-##
-#printers <- as.data.frame(course(c(70,70,45,100,100,100,100,113,113,113,113,113,113,113,113, 132, 132, 132, 132, 132, 132, 144, 144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,128,128,128,128,180, 195, 157 ))[,c(3,4)])
-
-#course(optCou)
-
-#printers <- matrix(as.double(matrix(unlist(printers), nrow = TL, ncol=2)), nrow = TL, ncol=2)
-#colnames(printers) <- c("Lon", "Lat")
-#pointers
-#printers <- as.data.frame(printers)
-
-#printers <- as.data.frame(course(c(70,70,45,100,100,100,100,113,113,113,113,113,113,113,113, 132, 132, 132, 132, 132, 132, 144, 144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,144,128,128,128,128,180, 195, 157 ))[,c(3,4)])
-
-#course(optCou)
 
 painters <- as.data.frame(course(fidu$par)[,c(3,4)])
 
 painters <- matrix(as.double(matrix(unlist(painters), nrow = TL, ncol=2)), nrow = TL, ncol=2)
 colnames(painters) <- c("Lon", "Lat")
-#pointers
+
 painters <- as.data.frame(painters)
 
 
-#rbind(pointers,printers, painters)
-
-#as.data.frame(c(pointers, printers))
+# Themes for grid
 mytheme <- gridExtra::ttheme_default(
   core = list(fg_params=list(cex = 0.8)),
   colhead = list(fg_params=list(cex = 0.8)),
   rowhead = list(fg_params=list(cex = 0.8)))
 
-#pdf("C:/Personal/VOR/plot.pdf",width=6,height=4,paper='special') 
+# Draw map and table
 grid.arrange(tableGrob(course(fidu$par)[1:12, c(1, 5, 6, 7)], theme = mytheme), ggmap(mapgilbert) +
                geom_point(data = as.data.frame(rbind(painters)), aes(x = as.double(Lon), y = as.double(Lat)), color = 4, fill = 4, size = 2, alpha=0.8)+
                geom_point(data = as.data.frame(rbind(pointers)), aes(x = as.double(Lon), y = as.double(Lat)), color = 3, fill = 3, size = 2, alpha=0.8)+
                geom_point(data = as.data.frame(c(DLo, DLa)), aes(x = DLo, y = DLa), color = 2, fill = 2, size = 2, alpha=0.8)  
              , ncol=2)
 
-#  annotate("text", x=180, y=15, label = course(fidu$par),         colour = I("red"), size = 3.5)
-#dev.off()
 
  
