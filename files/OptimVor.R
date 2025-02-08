@@ -27,8 +27,9 @@ library(tidyr)
 # source("C:/Personal/VOR/NN_1.R")
 # source("C:/Personal/VOR/NN_2.R")
 
-# Define the number of 3-hour steps to be calculated (Time Limit)
+# Define the number of 3-hour steps to be calculated (Time Limit) and initialize the number of data points to plot
 TL = 8
+dp=0
 
 
 # General matrix definition
@@ -877,7 +878,9 @@ mytheme <- gridExtra::ttheme_default(
   colhead = list(fg_params=list(cex = 1)),
   rowhead = list(fg_params=list(cex = 1)))
 
-grid.arrange(tableGrob(course(fidu$par)[1:8, c(1, 5, 6, 7)], theme = mytheme), ggmap(mapgilbert) +
+if(TL<12){dp=TL}else{dp=12}
+
+grid.arrange(tableGrob(course(fidu$par)[1:dp, c(1, 5, 6, 7)], theme = mytheme), ggmap(mapgilbert) +
                geom_point(data = as.data.frame(rbind(painters)), aes(x = as.double(Lon), y = as.double(Lat)), color = 4, fill = 4, size = 2, alpha=0.8)+
                geom_point(data = as.data.frame(rbind(pointers)), aes(x = as.double(Lon), y = as.double(Lat)), color = 3, fill = 3, size = 2, alpha=0.8)+
                geom_point(data = as.data.frame(c(DLo, DLa)), aes(x = DLo, y = DLa), color = 2, fill = 2, size = 2, alpha=0.8)  +
